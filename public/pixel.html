@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeniorDai — Pixel Retro Overlay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background: transparent;
+            overflow: hidden;
+            color: white;
+            image-rendering: pixelated;
+        }
+
+        /* ── PIXEL WAYBAR ────────────────────────────────── */
+        .pixel-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .pixel-module {
+            background: #000;
+            border: 4px solid #fff;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.5);
+        }
+
+        .module-kick { border-color: #53fc18; }
+        .module-sys { border-color: #78dce8; font-size: 8px; }
+
+        /* ── PIXEL LOGO (MAGIC ENERGY) ─────────────────────── */
+        .pixel-logo {
+            font-size: 20px;
+            background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbowFlow 2s linear infinite, jump 0.5s infinite alternate;
+            display: inline-block;
+        }
+
+        @keyframes rainbowFlow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        @keyframes jump {
+            from { transform: translateY(0); }
+            to { transform: translateY(-5px); }
+        }
+
+        /* ── EN VIVO PIXEL ─────────────────────────────────── */
+        .pixel-live {
+            color: #53fc18;
+            font-size: 10px;
+            animation: blink 1s steps(2) infinite;
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* ── CHAT & VIDEO ──────────────────────────────────── */
+        .pixel-box { background: #000; border: 4px solid #fff; box-shadow: 8px 8px 0px rgba(0,0,0,0.6); }
+    </style>
+</head>
+<body>
+    <div class="pixel-bar">
+        <!-- IZQUIERDA -->
+        <div class="flex gap-4">
+            <div class="pixel-module module-kick">
+                <span class="pixel-live">● EN VIVO</span>
+            </div>
+            <div class="pixel-module">
+                <span id="clock" style="font-size: 10px;">00:00</span>
+            </div>
+        </div>
+
+        <!-- CENTRO -->
+        <div class="pixel-module">
+            <span class="pixel-logo">SeniorDai</span>
+        </div>
+
+        <!-- DERECHA -->
+        <div class="flex gap-4">
+            <div class="pixel-module module-sys">
+                <span>CPU <span id="cpu-load">0%</span></span>
+                <span>RAM <span id="ram-usage">0%</span></span>
+            </div>
+            <div id="media-module" class="pixel-module">
+                <div class="flex flex-col gap-1 overflow-hidden" style="max-width: 200px;">
+                    <span id="music-title" style="font-size: 8px; white-space: nowrap;">Silencio</span>
+                    <span id="music-artist" style="font-size: 6px; color: #aaa;">Usa !play</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat -->
+    <div id="chat-widget" class="absolute bottom-10 left-10 w-[380px] h-[400px] flex flex-col">
+        <div id="chat-messages" class="flex-1 flex flex-col justify-end space-y-4 overflow-hidden"></div>
+    </div>
+
+    <!-- Video -->
+    <div id="media-widget" class="absolute top-32 right-10 w-[400px] pixel-box p-4 hidden transition-all" style="opacity: 0.85;">
+        <div id="player-container" class="w-full aspect-video bg-black relative">
+            <div id="youtube-player" class="absolute inset-0"></div>
+            <video id="direct-video" class="absolute inset-0 w-full h-full hidden" autoplay></video>
+        </div>
+        <div class="mt-4">
+            <div style="font-size: 10px;" id="video-title">---</div>
+        </div>
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="app.js"></script>
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>

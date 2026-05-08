@@ -1,10 +1,22 @@
 {
+  "name": "culoconkkrix",
+  "version": "2.0.0",
+  "type": "module",
+  "main": "culoconkkrix.js",
+  "scripts": {
+    "start": "node culoconkkrix.js",
+    "dev": "node --watch culoconkkrix.js",
+    "login": "node login.js"
+  },
   "dependencies": {
     "@retconned/kick-js": "^0.5.3",
     "dotenv": "^17.2.1",
+    "express": "^5.2.1",
     "gtts": "^0.2.1",
-    "gtts.js": "^1.0.1",
     "node-fetch": "^3.3.2",
-    "ws": "^8.18.3"
+    "puppeteer": "^24.43.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "socket.io": "^4.8.3"
   }
 }

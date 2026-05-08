@@ -1,0 +1,208 @@
+:root {
+    --kick-green: #53fc18;
+    --kick-green-alt: #46d614;
+    --dark-bg: rgba(10, 10, 10, 0.85);
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --text-main: #ffffff;
+    --text-muted: #a0a0a0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: transparent;
+    overflow: hidden;
+    color: var(--text-main);
+}
+
+#overlay {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+.widget {
+    position: absolute;
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hidden {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+    pointer-events: none;
+}
+
+/* ─── Chat Widget ─────────────────────────────────────────────────────────── */
+
+#chat-widget {
+    bottom: 40px;
+    left: 40px;
+    width: 380px;
+    height: 450px;
+    background: var(--dark-bg);
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+}
+
+#chat-messages {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.message-item {
+    margin-bottom: 12px;
+    animation: slideIn 0.3s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+}
+
+.message-user {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--kick-green);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.message-content {
+    background: var(--glass-bg);
+    padding: 8px 12px;
+    border-radius: 0 12px 12px 12px;
+    font-size: 1rem;
+    line-height: 1.4;
+    border-left: 3px solid var(--kick-green);
+}
+
+/* ─── Media Widget ────────────────────────────────────────────────────────── */
+
+#media-widget {
+    top: 40px;
+    right: 40px;
+    width: 400px;
+    background: var(--dark-bg);
+    /* blur extra sobre el fondo del widget (más que el .widget genérico) */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 10px;
+    overflow: hidden;
+}
+
+/* Contenedor del video con blur suave encima de la imagen */
+#youtube-player,
+#direct-video {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+    background: #000;
+    display: block;
+    /* blur aplicado al propio elemento de video */
+    filter: blur(1.5px);
+    /* pequeño scale para que el blur no deje bordes transparentes */
+    transform: scale(1.02);
+}
+
+/* Wrapper que recorta el overflow del scale sin cortar los bordes redondeados */
+#video-container {
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+#media-info {
+    padding: 15px 5px 5px 5px;
+}
+
+.now-playing {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--kick-green);
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+}
+
+#video-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+#video-requester {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+#video-requester span {
+    color: var(--kick-green);
+    font-weight: 600;
+}
+
+#queue-indicator {
+    position: absolute;
+    bottom: 10px;
+    right: 15px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: var(--kick-green);
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
+/* ─── Animations ──────────────────────────────────────────────────────────── */
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.alert {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--kick-green);
+    color: #000;
+    padding: 20px 40px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 1.5rem;
+    box-shadow: 0 0 50px rgba(83, 252, 24, 0.4);
+    animation: alertPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes alertPop {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    80%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
