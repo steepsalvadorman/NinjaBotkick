@@ -23,7 +23,7 @@ if (!fs.existsSync(ttsDir)) fs.mkdirSync(ttsDir);
 
 app.use(express.static("public"));
 
-// ─── Estadísticas de Sistema (CPU/RAM) ──────────────────────────────────────
+// ─── Estadísticas de Sistema y Meta de Seguidores ───────────────────────────
 
 let lastCpuTime = getCpuTime();
 
@@ -36,6 +36,28 @@ function getCpuTime() {
     });
     return { idle: totalIdle / cpus.length, total: totalTick / cpus.length };
 }
+
+// Cargar la meta de seguidores (fácil de cambiar en el .env)
+let followGoal = parseInt(process.env.FOLLOW_GOAL || "100", 10);
+let currentFollowers = parseInt(process.env.CURRENT_FOLLOWERS || "0", 10);
+
+// Sincronizar followers reales de Kick periódicamente si la API pública lo permite
+async function fetchRealFollowers() {
+    try {
+        const chan = process.env.CHANNEL_NAME || "seniordai";
+        const res = await fetch(`https://kick.com/api/v1/channels/${chan}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.followersCount !== undefined) {
+                currentFollowers = data.followersCount;
+            } else if (data && data.followers_count !== undefined) {
+                currentFollowers = data.followers_count;
+            }
+        }
+    } catch (e) { /* Fallback silencioso a la variable del .env ante Cloudflare */ }
+}
+fetchRealFollowers();
+setInterval(fetchRealFollowers, 60000); // Refrescar cada minuto
 
 function sendSystemStats() {
     const currentCpuTime = getCpuTime();
@@ -51,6 +73,12 @@ function sendSystemStats() {
     io.emit("sysStats", {
         cpu: isNaN(cpuUsage) ? "0" : cpuUsage.toString(),
         ram: usedMemPercent.toFixed(1)
+    });
+
+    // Emitir la meta de seguidores al overlay constantemente
+    io.emit("followGoal", {
+        current: currentFollowers,
+        goal: followGoal
     });
 }
 
@@ -242,7 +270,7 @@ async function getVideoTitle(url) {
 client.on("ChatMessage", async (message) => {
   const content = message.content.trim();
   const username = message.sender.username;
-  const isOwner = username.toLowerCase() === "seniordai";
+  const isOwner = username.toLowerCase() === CHANNEL_NAME.toLowerCase();
 
   // Emitir mensajes al overlay
   io.emit("chatMessage", { user: username, content });
@@ -267,11 +295,16 @@ client.on("ChatMessage", async (message) => {
     const isDirectVideo = /\.(mp4|webm|mov|m4v)$/i.test(url);
     if (isDirectVideo) {
         const fileName = url.split('/').pop().split('?')[0];
-        io.emit("songRequest", {
+        const title = fileName || "Video Directo";
+        const songData = {
             url: url,
-            title: fileName || "Video Directo",
+            title: title,
             user: username,
-        });
+        };
+        videoQueue.push(songData);
+        saveQueue();
+        console.log(`📡 Enviando video directo al overlay: ${title}`);
+        io.emit("syncQueue", videoQueue);
         return;
     }
 

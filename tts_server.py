@@ -392,15 +392,17 @@ if __name__ == "__main__":
 
     print()
     print("╔══════════════════════════════════════════════════╗")
-    print("║   🎤 CuloconKKRix — Servidor de Voz Pro v2.0   ║")
+    print("║   🎤 CuloconKKRix — Servidor de Voz Pro v2.0     ║")
     print("╠══════════════════════════════════════════════════╣")
-    print("║  Voces disponibles:                             ║")
+    print("║  Voces disponibles:                              ║")
     for vid, vname in EDGE_VOICES.items():
         label = f"  ► {vid:8s} → {vname}"
         print(f"║{label:<50s}║")
     print("╠══════════════════════════════════════════════════╣")
-    print(f"║  API Docs: http://127.0.0.1:{actual_port}/docs{' ' * (11 - len(str(actual_port)))}║")
-    print(f"║  Test TTS: http://127.0.0.1:{actual_port}/test{' ' * (11 - len(str(actual_port)))}║")
+    api_docs = f"  API Docs: http://127.0.0.1:{actual_port}/docs"
+    test_tts = f"  Test TTS: http://127.0.0.1:{actual_port}/test"
+    print(f"║{api_docs:<50s}║")
+    print(f"║{test_tts:<50s}║")
     print("╚══════════════════════════════════════════════════╝")
     print()
 

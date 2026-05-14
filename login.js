@@ -32,7 +32,7 @@ async function startLogin() {
 
     const cookies = await page.cookies();
     const relevantCookies = ['kick_session', 'session_token', 'XSRF-TOKEN'];
-    
+
     const cookieString = cookies
         .filter(c => relevantCookies.includes(c.name))
         .map(c => `${c.name}=${c.value}`)
@@ -70,3 +70,5 @@ function updateEnvFile(cookieString) {
 }
 
 startLogin();
+
+
