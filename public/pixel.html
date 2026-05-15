@@ -433,6 +433,13 @@
 
     <script>
     // ═══════════════════════════════════════════════════════════════
+    // CONFIGURACIÓN DE VOLUMEN
+    // ═══════════════════════════════════════════════════════════════
+    const VOL_MUSIC_YT = 25;    // Volumen de YouTube (0 a 100)
+    const VOL_MUSIC_DIR = 0.25; // Volumen de videos directos (0.0 a 1.0)
+    const VOL_TTS = 1.0;        // Volumen de las alertas/TTS (0.0 a 1.0)
+
+    // ═══════════════════════════════════════════════════════════════
     // SOCKET
     // ═══════════════════════════════════════════════════════════════
     const socket = io();
@@ -479,7 +486,7 @@
                 onStateChange: (e) => {
                     if (e.data === YT.PlayerState.PLAYING) {
                         clearTimeout(loadingTimeout);
-                        if (ytPlayer.isMuted()) { ytPlayer.unMute(); ytPlayer.setVolume(100); }
+                        if (ytPlayer.isMuted()) { ytPlayer.unMute(); ytPlayer.setVolume(VOL_MUSIC_YT); }
                     }
                     if (e.data === YT.PlayerState.ENDED) finishCurrent();
                 },
@@ -553,6 +560,7 @@
         directVideo.style.display = "block";
         if (isPlayerReady) ytPlayer.stopVideo();
         directVideo.src = url;
+        directVideo.volume = VOL_MUSIC_DIR;
         directVideo.play().catch(() => finishCurrent());
         directVideo.onended = () => finishCurrent();
         directVideo.onerror = () => finishCurrent();
@@ -667,7 +675,9 @@
 
     socket.on("speak", (data) => {
         if (audioContext.state === "suspended") audioContext.resume();
-        new Audio("data:audio/mp3;base64," + data.audioBase64).play();
+        const ttsAudio = new Audio("data:audio/mp3;base64," + data.audioBase64);
+        ttsAudio.volume = VOL_TTS;
+        ttsAudio.play();
     });
     </script>
 </body>

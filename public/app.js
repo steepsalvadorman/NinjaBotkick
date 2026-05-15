@@ -9,8 +9,12 @@
 //   socket.emit("advanceQueue")       → cuando un video termina
 
 const socket = io();
-
 // ─── DOM Refs ─────────────────────────────────────────────────────────────────
+
+// ─── CONFIGURACIÓN DE VOLUMEN ─────────────────────────────────────────────────
+const VOL_MUSIC_YT = 25;    // Volumen de YouTube (0 a 100)
+const VOL_MUSIC_DIR = 0.25; // Volumen de videos directos (0.0 a 1.0)
+const VOL_TTS = 1.0;        // Volumen de las alertas/TTS (0.0 a 1.0)
 
 const chatMessages     = document.getElementById("chat-messages");
 const mediaWidget      = document.getElementById("media-widget");
@@ -157,7 +161,7 @@ function onYouTubeIframeAPIReady() {
 function onPlayerStateChange(event) {
   if (event.data === YT.PlayerState.PLAYING) {
     clearTimeout(loadingTimeout);
-    if (player.isMuted()) { player.unMute(); player.setVolume(100); }
+    if (player.isMuted()) { player.unMute(); player.setVolume(VOL_MUSIC_YT); }
   }
   if (event.data === YT.PlayerState.ENDED) {
     finishCurrent();
@@ -192,6 +196,7 @@ function playDirect(url) {
   if (isPlayerReady) player.stopVideo();
 
   directVideo.src = url;
+  directVideo.volume = VOL_MUSIC_DIR;
   directVideo.play().catch(() => finishCurrent());
   directVideo.onended = () => finishCurrent();
   directVideo.onerror = () => finishCurrent();
@@ -329,5 +334,7 @@ socket.on("chatMessage", (data) => {
 
 socket.on("speak", (data) => {
   if (audioContext.state === "suspended") audioContext.resume();
-  new Audio("data:audio/mp3;base64," + data.audioBase64).play();
+  const ttsAudio = new Audio("data:audio/mp3;base64," + data.audioBase64);
+  ttsAudio.volume = VOL_TTS;
+  ttsAudio.play();
 });
