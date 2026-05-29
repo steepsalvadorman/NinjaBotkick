@@ -18,6 +18,11 @@ use tower_http::services::ServeDir;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
+pub struct SorteoState {
+    pub open:         bool,
+    pub participants: Vec<String>,
+}
+
 pub struct AppState {
     pub config:       Config,
     pub video_queue:  Arc<RwLock<VideoQueue>>,
@@ -35,6 +40,10 @@ pub struct AppState {
     pub refresh_token_val: Arc<RwLock<String>>,
     /// Evita doble-avance cuando varios overlays envían advanceQueue a la vez
     pub last_advance: Arc<Mutex<Option<std::time::Instant>>>,
+    /// Momento en que arrancó el bot (para !uptime)
+    pub start_time:   std::time::Instant,
+    /// Estado del sorteo activo
+    pub sorteo:       Arc<Mutex<SorteoState>>,
 }
 
 #[tokio::main]
@@ -76,6 +85,8 @@ async fn main() {
         chatroom_id:  Arc::new(RwLock::new(None)),
         followers:    Arc::new(AtomicU64::new(config.current_followers)),
         last_advance: Arc::new(Mutex::new(None)),
+        start_time:   std::time::Instant::now(),
+        sorteo:       Arc::new(Mutex::new(SorteoState { open: false, participants: Vec::new() })),
     });
 
     // Renovar token automáticamente antes de que expire

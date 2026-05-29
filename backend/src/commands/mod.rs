@@ -40,6 +40,177 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
         }
     }
 
+    // ── Comandos informativos (cualquiera del chat) ───────────────────────────
+    {
+        use crate::kick::sender;
+        let cfg = &state.config;
+        match cmd.as_str() {
+            "!discord" => {
+                if !cfg.cmd_discord.is_empty() {
+                    sender::send(&format!("💬 Discord → {}", cfg.cmd_discord), state).await;
+                }
+                return;
+            }
+            "!redes" | "!rrss" | "!rss" => {
+                if !cfg.cmd_redes.is_empty() {
+                    sender::send(&format!("📱 Redes → {}", cfg.cmd_redes), state).await;
+                }
+                return;
+            }
+            "!pc" | "!setup" | "!specs" => {
+                if !cfg.cmd_pc.is_empty() {
+                    sender::send(&format!("🖥️ Setup → {}", cfg.cmd_pc), state).await;
+                }
+                return;
+            }
+            "!horario" | "!schedule" => {
+                if !cfg.cmd_horario.is_empty() {
+                    sender::send(&format!("📅 Horario → {}", cfg.cmd_horario), state).await;
+                }
+                return;
+            }
+            "!comandos" | "!help" | "!ayuda" | "!commands" => {
+                sender::send(
+                    "📋 Comandos: !play [url] · !s [texto] · !discord · !redes · !pc · !horario · !dado · !8ball [pregunta] · !sorteo · !uptime · !cola",
+                    state,
+                ).await;
+                return;
+            }
+            _ => {}
+        }
+    }
+
+    // ── Comandos dinámicos ────────────────────────────────────────────────────
+    {
+        use crate::kick::sender;
+        use std::sync::atomic::Ordering;
+
+        match cmd.as_str() {
+            "!uptime" => {
+                let secs  = state.start_time.elapsed().as_secs();
+                let horas = secs / 3600;
+                let mins  = (secs % 3600) / 60;
+                let msg   = if horas > 0 {
+                    format!("⏱️ Llevamos {horas}h {mins}m en vivo")
+                } else {
+                    format!("⏱️ Llevamos {mins}m en vivo")
+                };
+                sender::send(&msg, state).await;
+                return;
+            }
+            "!cola" | "!queue" => {
+                let q = state.video_queue.read().await;
+                let msg = if q.items.is_empty() {
+                    "📭 La cola de videos está vacía".to_string()
+                } else {
+                    let lista: Vec<String> = q.items.iter().enumerate()
+                        .take(5)
+                        .map(|(i, v)| format!("{}. {}", i + 1, v.title))
+                        .collect();
+                    let extra = if q.items.len() > 5 {
+                        format!(" (+{} más)", q.items.len() - 5)
+                    } else {
+                        String::new()
+                    };
+                    format!("🎬 Cola: {}{}", lista.join(" · "), extra)
+                };
+                sender::send(&msg, state).await;
+                return;
+            }
+            "!seguidores" | "!followers" | "!seguidos" => {
+                let actual = state.followers.load(Ordering::Relaxed);
+                let meta   = state.config.follow_goal;
+                let pct    = if meta > 0 { actual * 100 / meta } else { 0 };
+                sender::send(
+                    &format!("👥 Seguidores: {actual} / {meta} ({pct}%)"),
+                    state,
+                ).await;
+                return;
+            }
+            _ => {}
+        }
+    }
+
+    // ── Entretenimiento ───────────────────────────────────────────────────────
+    {
+        use crate::kick::sender;
+        use rand::Rng;
+        use rand::seq::SliceRandom;
+
+        // !dado
+        if cmd == "!dado" {
+            let n: u8 = rand::thread_rng().gen_range(1..=100);
+            sender::send(&format!("🎲 {username} sacó un {n}!"), state).await;
+            return;
+        }
+
+        // !8ball [pregunta]
+        if cmd == "!8ball" || cmd.starts_with("!8ball ") {
+            const RESPUESTAS: &[&str] = &[
+                "Sí, definitivamente 🟢", "Es cierto 🟢", "Sin duda 🟢",
+                "Por supuesto 🟢", "Puedes contar con ello 🟢",
+                "Probablemente sí 🟡", "Perspectivas favorables 🟡",
+                "Las señales apuntan al sí 🟡",
+                "No lo sé, pregunta más tarde 🔵", "Concéntrate y pregunta de nuevo 🔵",
+                "Mejor no te digo ahora 🔵", "Difícil de decir 🔵",
+                "No cuentes con ello 🔴", "Mi respuesta es no 🔴",
+                "Las perspectivas no son buenas 🔴", "Muy dudoso 🔴",
+            ];
+            let resp = RESPUESTAS.choose(&mut rand::thread_rng()).unwrap_or(&"Quizás");
+            sender::send(&format!("🎱 {resp}"), state).await;
+            return;
+        }
+
+        // !sorteo
+        if cmd == "!sorteo" || cmd.starts_with("!sorteo ") || cmd == "!participar" || cmd == "!entrar" {
+            let sub = if cmd == "!participar" || cmd == "!entrar" {
+                ""
+            } else {
+                cmd.strip_prefix("!sorteo").unwrap_or("").trim()
+            };
+
+            match sub {
+                "abrir" | "open" | "start" if is_owner => {
+                    let mut s = state.sorteo.lock().await;
+                    s.open = true;
+                    s.participants.clear();
+                    drop(s);
+                    sender::send("🎟️ ¡El sorteo está abierto! Escribe !sorteo o !participar para unirte", state).await;
+                }
+                "cerrar" | "close" | "stop" if is_owner => {
+                    let mut s = state.sorteo.lock().await;
+                    s.open = false;
+                    let count = s.participants.len();
+                    drop(s);
+                    sender::send(&format!("🔒 Sorteo cerrado. {count} participantes registrados"), state).await;
+                }
+                "ganador" | "winner" | "resultado" if is_owner => {
+                    let mut s = state.sorteo.lock().await;
+                    s.open = false;
+                    let winner = s.participants.choose(&mut rand::thread_rng()).cloned();
+                    drop(s);
+                    match winner {
+                        Some(w) => sender::send(&format!("🏆 ¡¡El ganador del sorteo es @{w}!! 🎉🎉🎉"), state).await,
+                        None    => sender::send("😅 No hay participantes en el sorteo", state).await,
+                    }
+                }
+                "" => {
+                    let mut s = state.sorteo.lock().await;
+                    if !s.open { return; }
+                    if s.participants.iter().any(|p| p.eq_ignore_ascii_case(username)) {
+                        return;
+                    }
+                    s.participants.push(username.to_string());
+                    let count = s.participants.len();
+                    drop(s);
+                    sender::send(&format!("✅ @{username} se unió al sorteo! ({count} participantes)"), state).await;
+                }
+                _ => {}
+            }
+            return;
+        }
+    }
+
     // ── !play ──────────────────────────────────────────────────────────────────
     if let Some(url) = content.strip_prefix("!play ") {
         play(url.trim().to_string(), username.to_string(), state).await;
