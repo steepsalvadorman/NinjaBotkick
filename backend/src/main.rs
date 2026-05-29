@@ -1,5 +1,6 @@
 mod commands;
 mod config;
+mod cooldown;
 mod kick;
 mod queue;
 mod server;
@@ -44,6 +45,8 @@ pub struct AppState {
     pub start_time:   std::time::Instant,
     /// Estado del sorteo activo
     pub sorteo:       Arc<Mutex<SorteoState>>,
+    /// Anti-spam: cooldowns por usuario y globales
+    pub cooldown:     Arc<Mutex<cooldown::CooldownManager>>,
 }
 
 #[tokio::main]
@@ -87,6 +90,7 @@ async fn main() {
         last_advance: Arc::new(Mutex::new(None)),
         start_time:   std::time::Instant::now(),
         sorteo:       Arc::new(Mutex::new(SorteoState { open: false, participants: Vec::new() })),
+        cooldown:     Arc::new(Mutex::new(cooldown::CooldownManager::new())),
     });
 
     // Renovar token automáticamente antes de que expire

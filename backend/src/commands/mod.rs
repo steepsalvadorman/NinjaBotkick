@@ -40,53 +40,66 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
         }
     }
 
-    // ── Comandos informativos (cualquiera del chat) ───────────────────────────
+    // ── Comandos informativos (cooldown global 20s) ───────────────────────────
     {
         use crate::kick::sender;
         let cfg = &state.config;
+
+        macro_rules! global_cmd {
+            ($key:expr, $body:expr) => {{
+                if !is_owner {
+                    let ok = { state.cooldown.lock().await.check_global($key, 20) };
+                    if !ok { return; }
+                    state.cooldown.lock().await.use_global($key);
+                }
+                $body
+                return;
+            }};
+        }
+
         match cmd.as_str() {
-            "!discord" => {
+            "!discord" => global_cmd!("!discord", {
                 if !cfg.cmd_discord.is_empty() {
                     sender::send(&format!("💬 Discord → {}", cfg.cmd_discord), state).await;
                 }
-                return;
-            }
-            "!redes" | "!rrss" | "!rss" => {
+            }),
+            "!redes" | "!rrss" | "!rss" => global_cmd!("!redes", {
                 if !cfg.cmd_redes.is_empty() {
                     sender::send(&format!("📱 Redes → {}", cfg.cmd_redes), state).await;
                 }
-                return;
-            }
-            "!pc" | "!setup" | "!specs" => {
+            }),
+            "!pc" | "!setup" | "!specs" => global_cmd!("!pc", {
                 if !cfg.cmd_pc.is_empty() {
                     sender::send(&format!("🖥️ Setup → {}", cfg.cmd_pc), state).await;
                 }
-                return;
-            }
-            "!horario" | "!schedule" => {
+            }),
+            "!horario" | "!schedule" => global_cmd!("!horario", {
                 if !cfg.cmd_horario.is_empty() {
                     sender::send(&format!("📅 Horario → {}", cfg.cmd_horario), state).await;
                 }
-                return;
-            }
-            "!comandos" | "!help" | "!ayuda" | "!commands" => {
+            }),
+            "!comandos" | "!help" | "!ayuda" | "!commands" => global_cmd!("!comandos", {
                 sender::send(
                     "📋 Comandos: !play [url] · !s [texto] · !discord · !redes · !pc · !horario · !dado · !8ball [pregunta] · !sorteo · !uptime · !cola",
                     state,
                 ).await;
-                return;
-            }
+            }),
             _ => {}
         }
     }
 
-    // ── Comandos dinámicos ────────────────────────────────────────────────────
+    // ── Comandos dinámicos (cooldown global 30-60s) ───────────────────────────
     {
         use crate::kick::sender;
         use std::sync::atomic::Ordering;
 
         match cmd.as_str() {
             "!uptime" => {
+                if !is_owner {
+                    let ok = { state.cooldown.lock().await.check_global("!uptime", 30) };
+                    if !ok { return; }
+                    state.cooldown.lock().await.use_global("!uptime");
+                }
                 let secs  = state.start_time.elapsed().as_secs();
                 let horas = secs / 3600;
                 let mins  = (secs % 3600) / 60;
@@ -99,6 +112,11 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
                 return;
             }
             "!cola" | "!queue" => {
+                if !is_owner {
+                    let ok = { state.cooldown.lock().await.check_global("!cola", 30) };
+                    if !ok { return; }
+                    state.cooldown.lock().await.use_global("!cola");
+                }
                 let q = state.video_queue.read().await;
                 let msg = if q.items.is_empty() {
                     "📭 La cola de videos está vacía".to_string()
@@ -118,6 +136,11 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
                 return;
             }
             "!seguidores" | "!followers" | "!seguidos" => {
+                if !is_owner {
+                    let ok = { state.cooldown.lock().await.check_global("!seguidores", 60) };
+                    if !ok { return; }
+                    state.cooldown.lock().await.use_global("!seguidores");
+                }
                 let actual = state.followers.load(Ordering::Relaxed);
                 let meta   = state.config.follow_goal;
                 let pct    = if meta > 0 { actual * 100 / meta } else { 0 };
@@ -137,15 +160,25 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
         use rand::Rng;
         use rand::seq::SliceRandom;
 
-        // !dado
+        // !dado — cooldown 15s por usuario
         if cmd == "!dado" {
+            if !is_owner {
+                let ok = { state.cooldown.lock().await.check_user(username, "!dado", 15) };
+                if !ok { return; }
+                state.cooldown.lock().await.use_user(username, "!dado");
+            }
             let n: u8 = rand::thread_rng().gen_range(1..=100);
             sender::send(&format!("🎲 {username} sacó un {n}!"), state).await;
             return;
         }
 
-        // !8ball [pregunta]
+        // !8ball — cooldown 10s por usuario
         if cmd == "!8ball" || cmd.starts_with("!8ball ") {
+            if !is_owner {
+                let ok = { state.cooldown.lock().await.check_user(username, "!8ball", 10) };
+                if !ok { return; }
+                state.cooldown.lock().await.use_user(username, "!8ball");
+            }
             const RESPUESTAS: &[&str] = &[
                 "Sí, definitivamente 🟢", "Es cierto 🟢", "Sin duda 🟢",
                 "Por supuesto 🟢", "Puedes contar con ello 🟢",
@@ -211,27 +244,38 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
         }
     }
 
-    // ── !play ──────────────────────────────────────────────────────────────────
+    // ── !play — cooldown 30s por usuario ──────────────────────────────────────
     if let Some(url) = content.strip_prefix("!play ") {
+        if !is_owner {
+            let ok = { state.cooldown.lock().await.check_user(username, "!play", 30) };
+            if !ok { return; }
+            state.cooldown.lock().await.use_user(username, "!play");
+        }
         play(url.trim().to_string(), username.to_string(), state).await;
         return;
     }
 
-    // ── Voz ────────────────────────────────────────────────────────────────────
+    // ── Voz (!s y voces directas) — cooldown 15s por usuario ─────────────────
     let Some((cmd_word, rest)) = content.split_once(' ') else { return };
     let text = rest.trim();
     if text.is_empty() { return; }
 
     let cmd_low = cmd_word.to_lowercase();
-    if cmd_low == "!s" {
-        state.tts_tx.send(tts::TtsQueueItem { text: text.into(), voice: "camila".into() }).ok();
-        return;
-    }
+    let is_tts = cmd_low == "!s"
+        || cmd_low.strip_prefix('!').map_or(false, |v| tts::edge_tts::is_valid_voice(v));
 
-    if let Some(voice) = cmd_low.strip_prefix('!') {
-        if tts::edge_tts::is_valid_voice(voice) {
-            state.tts_tx.send(tts::TtsQueueItem { text: text.into(), voice: voice.into() }).ok();
+    if is_tts {
+        if !is_owner {
+            let ok = { state.cooldown.lock().await.check_user(username, "!s", 15) };
+            if !ok { return; }
+            state.cooldown.lock().await.use_user(username, "!s");
         }
+        let voice = if cmd_low == "!s" {
+            "camila".to_string()
+        } else {
+            cmd_low.trim_start_matches('!').to_string()
+        };
+        state.tts_tx.send(tts::TtsQueueItem { text: text.into(), voice }).ok();
     }
 }
 
