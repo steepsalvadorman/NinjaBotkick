@@ -19,7 +19,10 @@ pub async fn get_channel_info(http: &reqwest::Client, channel: &str) -> Option<C
 
     let json: serde_json::Value = resp.json().await.ok()?;
 
-    let channel_id  = json["id"].as_u64()?;
+    // user_id es el broadcaster_user_id que exige la API de chat (/public/v1/chat)
+    // En Kick suelen coincidir, pero user_id es el campo correcto
+    let channel_id  = json["user_id"].as_u64()
+        .or_else(|| json["id"].as_u64())?;
     let chatroom_id = json["chatroom"]["id"].as_u64()?;
     let slug        = json["slug"].as_str().unwrap_or(channel).to_string();
 

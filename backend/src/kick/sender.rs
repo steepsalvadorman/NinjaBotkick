@@ -58,10 +58,11 @@ async fn try_send_official(
     let body = serde_json::json!({
         "broadcaster_user_id": broadcaster_user_id,
         "content": text,
+        "type": "user",
     });
 
     let r = state.http
-        .post("https://api.kick.com/v1/chat")
+        .post("https://api.kick.com/public/v1/chat")
         .header("Authorization", format!("Bearer {bearer}"))
         .header("Content-Type",  "application/json")
         .json(&body)
