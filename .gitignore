@@ -1,4 +1,27 @@
-node_modules
+# ── Credenciales (NUNCA en git) ───────────────────────────────────────────
 .env
-backend/target
-data/tts_cache
+
+# ── Node.js ───────────────────────────────────────────────────────────────
+node_modules/
+dist/
+npm-debug.log*
+
+# ── Rust build ────────────────────────────────────────────────────────────
+backend/target/
+
+# ── Runtime / datos generados ─────────────────────────────────────────────
+data/queue.json
+backend/data/queue.json
+data/tts_cache/
+backend/data/tts_cache/
+tts_cache/
+*.mp3
+
+# ── OS ────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Editores ──────────────────────────────────────────────────────────────
+.vscode/settings.json
+*.swp
+*.swo
