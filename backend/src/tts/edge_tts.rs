@@ -50,3 +50,38 @@ pub async fn synthesize(text: &str, voice_id: &str) -> Result<Vec<u8>, String> {
 
     Ok(bytes)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn known_voices_resolve_correctly() {
+        assert_eq!(voice_name("camila"),  "es-PE-CamilaNeural");
+        assert_eq!(voice_name("dalia"),   "es-MX-DaliaNeural");
+        assert_eq!(voice_name("jorge"),   "es-MX-JorgeNeural");
+        assert_eq!(voice_name("alex"),    "es-PE-AlexNeural");
+        assert_eq!(voice_name("jacinta"), "es-PE-CamilaNeural");
+    }
+
+    #[test]
+    fn unknown_voice_falls_back_to_camila() {
+        assert_eq!(voice_name("noexiste"), "es-PE-CamilaNeural");
+        assert_eq!(voice_name(""),         "es-PE-CamilaNeural");
+    }
+
+    #[test]
+    fn all_voices_in_list_are_valid() {
+        for (name, _) in VOICES {
+            assert!(is_valid_voice(name), "'{name}' debería ser válida");
+        }
+    }
+
+    #[test]
+    fn unknown_voices_are_invalid() {
+        assert!(!is_valid_voice(""));
+        assert!(!is_valid_voice("s"));
+        assert!(!is_valid_voice("español"));
+        assert!(!is_valid_voice("es-PE-CamilaNeural")); // nombre completo, no alias
+    }
+}

@@ -396,6 +396,70 @@ async fn first_from_playlist(http: &reqwest::Client, url: &str) -> Option<(Strin
     Some((vid, title))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn yt_id_standard_watch_url() {
+        assert_eq!(yt_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ"), Some("dQw4w9WgXcQ".into()));
+    }
+
+    #[test]
+    fn yt_id_short_youtu_be() {
+        assert_eq!(yt_id("https://youtu.be/dQw4w9WgXcQ"), Some("dQw4w9WgXcQ".into()));
+    }
+
+    #[test]
+    fn yt_id_shorts_format() {
+        assert_eq!(yt_id("https://www.youtube.com/shorts/dQw4w9WgXcQ"), Some("dQw4w9WgXcQ".into()));
+    }
+
+    #[test]
+    fn yt_id_embed_format() {
+        assert_eq!(yt_id("https://www.youtube.com/embed/dQw4w9WgXcQ"), Some("dQw4w9WgXcQ".into()));
+    }
+
+    #[test]
+    fn yt_id_with_extra_params() {
+        assert_eq!(
+            yt_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42&list=PL123"),
+            Some("dQw4w9WgXcQ".into())
+        );
+    }
+
+    #[test]
+    fn yt_id_youtu_be_with_params() {
+        assert_eq!(yt_id("https://youtu.be/dQw4w9WgXcQ?si=abc123"), Some("dQw4w9WgXcQ".into()));
+    }
+
+    #[test]
+    fn yt_id_rejects_non_youtube() {
+        assert_eq!(yt_id("https://www.twitch.tv/somestream"), None);
+        assert_eq!(yt_id("https://open.spotify.com/track/abc"), None);
+    }
+
+    #[test]
+    fn yt_id_rejects_too_short_id() {
+        assert_eq!(yt_id("https://youtu.be/abc"), None); // menos de 8 chars
+    }
+
+    #[test]
+    fn is_direct_video_detects_extensions() {
+        assert!(is_direct_video("https://cdn.example.com/video.mp4"));
+        assert!(is_direct_video("https://cdn.example.com/video.webm"));
+        assert!(is_direct_video("https://cdn.example.com/video.mov"));
+        assert!(is_direct_video("https://cdn.example.com/clip.mp4?token=abc"));
+    }
+
+    #[test]
+    fn is_direct_video_rejects_other_urls() {
+        assert!(!is_direct_video("https://www.youtube.com/watch?v=abc"));
+        assert!(!is_direct_video("https://cdn.example.com/video.mp3"));
+        assert!(!is_direct_video("https://cdn.example.com/file.html"));
+    }
+}
+
 async fn yt_title(http: &reqwest::Client, url: &str) -> String {
     let enc: String = url.bytes().flat_map(|b| {
         if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') {

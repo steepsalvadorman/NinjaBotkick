@@ -91,3 +91,50 @@ fn url_decode(s: &str) -> String {
 fn env_u64(key: &str, default: u64) -> u64 {
     env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_cookie_finds_value() {
+        let cookies = "kick_session=abc123; XSRF-TOKEN=xyz789; other=val";
+        assert_eq!(extract_cookie(cookies, "kick_session"), Some("abc123".into()));
+        assert_eq!(extract_cookie(cookies, "XSRF-TOKEN"),   Some("xyz789".into()));
+        assert_eq!(extract_cookie(cookies, "other"),        Some("val".into()));
+    }
+
+    #[test]
+    fn extract_cookie_returns_none_when_missing() {
+        let cookies = "kick_session=abc123";
+        assert_eq!(extract_cookie(cookies, "nonexistent"), None);
+    }
+
+    #[test]
+    fn extract_cookie_empty_string() {
+        assert_eq!(extract_cookie("", "kick_session"), None);
+    }
+
+    #[test]
+    fn extract_cookie_no_whitespace_ambiguity() {
+        // El parser hace trim() en cada part, así que con espacios funciona igual
+        let cookies = "  kick_session=abc123  ;  other=val  ";
+        assert_eq!(extract_cookie(cookies, "kick_session"), Some("abc123".into()));
+    }
+
+    #[test]
+    fn url_decode_plain_ascii_unchanged() {
+        assert_eq!(url_decode("hello"), "hello");
+        assert_eq!(url_decode("seniordai"), "seniordai");
+    }
+
+    #[test]
+    fn url_decode_percent_encoded_space() {
+        assert_eq!(url_decode("hello%20world"), "hello world");
+    }
+
+    #[test]
+    fn url_decode_plus_as_space() {
+        assert_eq!(url_decode("hello+world"), "hello world");
+    }
+}

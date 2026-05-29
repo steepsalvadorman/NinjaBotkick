@@ -42,3 +42,94 @@ impl CooldownManager {
         self.global.retain(|_, t| t.elapsed() < limit);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn user_not_on_cooldown_initially() {
+        let cd = CooldownManager::new();
+        assert!(cd.check_user("user1", "!dado", 15));
+    }
+
+    #[test]
+    fn user_on_cooldown_immediately_after_use() {
+        let mut cd = CooldownManager::new();
+        cd.use_user("user1", "!dado");
+        assert!(!cd.check_user("user1", "!dado", 15));
+    }
+
+    #[test]
+    fn zero_secs_cooldown_always_passes() {
+        let mut cd = CooldownManager::new();
+        cd.use_user("user1", "!dado");
+        assert!(cd.check_user("user1", "!dado", 0));
+    }
+
+    #[test]
+    fn different_users_are_independent() {
+        let mut cd = CooldownManager::new();
+        cd.use_user("user1", "!dado");
+        assert!(!cd.check_user("user1", "!dado", 15));
+        assert!(cd.check_user("user2", "!dado", 15));
+    }
+
+    #[test]
+    fn different_commands_are_independent() {
+        let mut cd = CooldownManager::new();
+        cd.use_user("user1", "!dado");
+        assert!(!cd.check_user("user1", "!dado", 15));
+        assert!(cd.check_user("user1", "!8ball", 15));
+    }
+
+    #[test]
+    fn username_is_case_insensitive() {
+        let mut cd = CooldownManager::new();
+        cd.use_user("SeniorDai", "!s");
+        assert!(!cd.check_user("seniordai", "!s", 15));
+        assert!(!cd.check_user("SENIORDAI", "!s", 15));
+    }
+
+    #[test]
+    fn global_cooldown_starts_free() {
+        let cd = CooldownManager::new();
+        assert!(cd.check_global("!uptime", 30));
+    }
+
+    #[test]
+    fn global_cooldown_blocks_after_use() {
+        let mut cd = CooldownManager::new();
+        cd.use_global("!uptime");
+        assert!(!cd.check_global("!uptime", 30));
+    }
+
+    #[test]
+    fn different_global_commands_are_independent() {
+        let mut cd = CooldownManager::new();
+        cd.use_global("!uptime");
+        assert!(!cd.check_global("!uptime", 30));
+        assert!(cd.check_global("!cola", 30));
+    }
+
+    #[test]
+    fn gc_with_large_timeout_keeps_fresh_entries() {
+        let mut cd = CooldownManager::new();
+        cd.use_user("user1", "!dado");
+        cd.use_global("!uptime");
+        cd.gc(3600);
+        assert_eq!(cd.per_user.len(), 1);
+        assert_eq!(cd.global.len(), 1);
+    }
+
+    #[test]
+    fn gc_with_zero_timeout_removes_all() {
+        let mut cd = CooldownManager::new();
+        cd.use_user("user1", "!dado");
+        cd.use_user("user2", "!s");
+        cd.use_global("!uptime");
+        cd.gc(0);
+        assert_eq!(cd.per_user.len(), 0);
+        assert_eq!(cd.global.len(), 0);
+    }
+}
