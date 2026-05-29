@@ -80,7 +80,7 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
             }),
             "!comandos" | "!help" | "!ayuda" | "!commands" => global_cmd!("!comandos", {
                 sender::send(
-                    "📋 Comandos: !play [url] · !s [texto] · !discord · !redes · !pc · !horario · !dado · !8ball [pregunta] · !sorteo · !uptime · !cola",
+                    "📋 Comandos: !play [url] · !s [texto] · !quitarme · !misongs · !dado · !8ball [pregunta] · !sorteo · !uptime · !cola · !discord · !redes · !pc · !horario",
                     state,
                 ).await;
             }),
@@ -240,6 +240,47 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
                 }
                 _ => {}
             }
+            return;
+        }
+    }
+
+    // ── Gestión personal de cola ──────────────────────────────────────────────
+    {
+        use crate::kick::sender;
+
+        // !quitarme — elimina el primer video del usuario en la cola
+        if cmd == "!quitarme" || cmd == "!removeme" || cmd == "!remove" {
+            let mut q = state.video_queue.write().await;
+            if let Some(pos) = q.items.iter().position(|v| v.user.eq_ignore_ascii_case(username)) {
+                let title = q.items[pos].title.clone();
+                q.remove(pos);
+                let items = q.items.clone();
+                drop(q);
+                state.io.emit("syncQueue", json!({"items": &items})).ok();
+                sender::send(&format!("🗑️ @{username} eliminó '{title}' de la cola"), state).await;
+            }
+            return;
+        }
+
+        // !misongs — lista los videos del usuario en la cola (cooldown 15s por usuario)
+        if cmd == "!misongs" || cmd == "!miscanciones" || cmd == "!mivideos" {
+            if !is_owner {
+                let ok = { state.cooldown.lock().await.check_user(username, "!misongs", 15) };
+                if !ok { return; }
+                state.cooldown.lock().await.use_user(username, "!misongs");
+            }
+            let q = state.video_queue.read().await;
+            let mis: Vec<String> = q.items.iter().enumerate()
+                .filter(|(_, v)| v.user.eq_ignore_ascii_case(username))
+                .map(|(i, v)| format!("{}. {}", i + 1, v.title))
+                .collect();
+            drop(q);
+            let msg = if mis.is_empty() {
+                format!("@{username} no tienes videos en la cola")
+            } else {
+                format!("🎵 @{username}: {}", mis.join(" · "))
+            };
+            sender::send(&msg, state).await;
             return;
         }
     }
