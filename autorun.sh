@@ -13,6 +13,22 @@ warn() { echo -e "${Y}⚠${N}  $*"; }
 err()  { echo -e "${R}✗${N}  $*"; exit 1; }
 info() { echo -e "${B}→${N}  $*"; }
 
+# ── Cargar .env sin interpretar valores como bash ────────────────────────────
+load_env() {
+    local line key val
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
+        key="${line%%=*}"
+        val="${line#*=}"
+        # Quitar comillas envolventes si existen
+        if [[ "$val" =~ ^\".*\"$ ]]; then val="${val:1:${#val}-2}"
+        elif [[ "$val" =~ ^\'.*\'$ ]]; then val="${val:1:${#val}-2}"
+        fi
+        export "${key}=${val}"
+    done < .env
+}
+
 # ── Función: refresh automático de token OAuth ────────────────────────────────
 refresh_token_auto() {
     [ -z "${KICK_REFRESH_TOKEN:-}" ] && return 1
@@ -99,10 +115,7 @@ if [ ! -f ".env" ]; then
 fi
 
 # Cargar .env en el entorno del script
-set -a
-# shellcheck source=.env
-source .env
-set +a
+load_env
 
 # ── 3. Verificar credenciales OAuth ──────────────────────────────────────────
 
@@ -153,7 +166,7 @@ if [ "$needs_login" = true ]; then
     echo ""
     node "$ROOT/login/login.js"
     # Recargar .env con los nuevos tokens
-    set -a; source .env; set +a
+    load_env
     ok "Autenticación completada"
 fi
 
