@@ -167,8 +167,7 @@ ok "Backend compilado"
 
 echo ""
 echo -e "${G}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${N}"
-echo -e "  Overlay  → ${B}http://localhost:${PORT:-3000}${N}"
-echo -e "  Panel    → ${B}http://localhost:${PORT:-3000}/panel.html${N}"
+echo -e "  Overlay  → ${B}http://localhost:${PORT:-3000}/pixel.html${N}"
 echo -e "${G}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${N}"
 echo ""
 
