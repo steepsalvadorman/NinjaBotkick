@@ -13,9 +13,29 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
     // ── Owner ──────────────────────────────────────────────────────────────────
     if is_owner {
         match cmd.as_str() {
-            "!von"  => { state.io.emit("toggleVideo", json!({"showVideo":true})).ok();  return; }
-            "!voff" => { state.io.emit("toggleVideo", json!({"showVideo":false})).ok(); return; }
-            "!next" => { state.io.emit("nextVideo", json!({})).ok();                     return; }
+            "!von" => {
+                info!("[CMD] {username}: !von");
+                state.io.emit("toggleVideo", json!({"showVideo": true})).ok();
+                return;
+            }
+            "!voff" => {
+                info!("[CMD] {username}: !voff");
+                state.io.emit("toggleVideo", json!({"showVideo": false})).ok();
+                return;
+            }
+            "!vstop" => {
+                info!("[CMD] {username}: !vstop");
+                let mut q = state.video_queue.write().await;
+                q.clear();
+                drop(q);
+                state.io.emit("syncQueue", json!({"items": []})).ok();
+                return;
+            }
+            "!next" | "!skip" => {
+                info!("[CMD] {username}: !next");
+                state.io.emit("nextVideo", json!({})).ok();
+                return;
+            }
             _ => {}
         }
     }
@@ -33,7 +53,7 @@ pub async fn handle(username: &str, content: &str, state: &Arc<AppState>) {
 
     let cmd_low = cmd_word.to_lowercase();
     if cmd_low == "!s" {
-        state.tts_tx.send(tts::TtsQueueItem { text: text.into(), voice: "dalia".into() }).ok();
+        state.tts_tx.send(tts::TtsQueueItem { text: text.into(), voice: "camila".into() }).ok();
         return;
     }
 
@@ -82,7 +102,7 @@ async fn enqueue(item: VideoItem, state: &Arc<AppState>) {
     let items = q.items.clone();
     drop(q);
     info!("[PLAY] Cola: {title}");
-    state.io.emit("syncQueue", &items).ok();
+    state.io.emit("syncQueue", serde_json::json!({"items": &items})).ok();
 }
 
 fn is_direct_video(url: &str) -> bool {

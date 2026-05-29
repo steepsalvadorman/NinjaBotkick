@@ -13,7 +13,7 @@ use std::sync::{
     atomic::AtomicU64,
     Arc,
 };
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{mpsc, Mutex, RwLock};
 use tower_http::services::ServeDir;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -33,6 +33,8 @@ pub struct AppState {
     /// Token OAuth activo (se puede renovar sin reiniciar)
     pub access_token:      Arc<RwLock<String>>,
     pub refresh_token_val: Arc<RwLock<String>>,
+    /// Evita doble-avance cuando varios overlays envían advanceQueue a la vez
+    pub last_advance: Arc<Mutex<Option<std::time::Instant>>>,
 }
 
 #[tokio::main]
@@ -50,6 +52,8 @@ async fn main() {
         std::process::exit(1);
     });
 
+    // Limpiar la cola al arrancar para evitar videos stale de sesiones anteriores
+    let _ = std::fs::write(&config.queue_file, "[]");
     let video_queue = Arc::new(RwLock::new(VideoQueue::load(&config.queue_file)));
     let (layer, io) = SocketIo::new_layer();
 
@@ -68,9 +72,10 @@ async fn main() {
             .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0")
             .build()
             .unwrap(),
-        channel_id:  Arc::new(RwLock::new(None)),
-        chatroom_id: Arc::new(RwLock::new(None)),
-        followers:   Arc::new(AtomicU64::new(config.current_followers)),
+        channel_id:   Arc::new(RwLock::new(None)),
+        chatroom_id:  Arc::new(RwLock::new(None)),
+        followers:    Arc::new(AtomicU64::new(config.current_followers)),
+        last_advance: Arc::new(Mutex::new(None)),
     });
 
     // Renovar token automáticamente antes de que expire

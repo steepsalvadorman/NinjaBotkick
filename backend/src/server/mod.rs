@@ -3,6 +3,15 @@ use socketioxide::extract::SocketRef;
 use std::sync::Arc;
 use tracing::info;
 
+/// Payload de advanceQueue: el overlay manda el video que acaba de terminar.
+/// El servidor solo avanza si ese video sigue siendo el primero de la cola.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AdvanceCmd {
+    video_id: Option<String>,
+    url:      Option<String>,
+}
+
 #[derive(serde::Deserialize)]
 struct PanelCmd {
     command: String,
@@ -19,24 +28,42 @@ pub fn setup(io: &socketioxide::SocketIo, state: Arc<AppState>) {
         let s2    = socket.clone();
 
         info!("Widget conectado: {}", socket.id);
+        socket.on_disconnect(|s: SocketRef, _: socketioxide::socket::DisconnectReason| async move {
+            info!("Widget desconectado: {}", s.id);
+        });
 
         // Enviar cola actual al conectar
         let st = state.clone();
         tokio::spawn(async move {
             let q = st.video_queue.read().await;
-            s2.emit("syncQueue", &q.items).ok();
+            s2.emit("syncQueue", serde_json::json!({"items": &q.items})).ok();
         });
 
-        // El overlay avanza la cola cuando termina un video
+        // El overlay avanza la cola cuando termina un video.
+        // Solo se procesa si el video que mandó el overlay coincide con el primero
+        // de la cola actual — esto previene dobles avances de múltiples overlays.
         let st = state.clone();
-        socket.on("advanceQueue", move |_: SocketRef| {
+        socket.on("advanceQueue", move |_: SocketRef, socketioxide::extract::Data(data): socketioxide::extract::Data<AdvanceCmd>| {
             let st = st.clone();
             async move {
                 let mut q = st.video_queue.write().await;
+                let current = match q.items.first() {
+                    Some(item) => item.clone(),
+                    None => return, // cola ya vacía
+                };
+                // Verificar que el video que terminó sea el actual
+                let matches = match (data.video_id.as_deref(), data.url.as_deref(),
+                                     current.video_id.as_deref(), current.url.as_deref()) {
+                    (Some(d), _, Some(c), _) => d == c,          // comparar por videoId
+                    (_, Some(d), _, Some(c)) => d == c,          // comparar por url
+                    (None, None, None, None) => true,            // item inválido (ambos null)
+                    _ => false,                                   // no coincide → ignorar
+                };
+                if !matches { return; }
                 q.advance();
                 let items = q.items.clone();
                 drop(q);
-                st.io.emit("syncQueue", &items).ok();
+                st.io.emit("syncQueue", serde_json::json!({"items": &items})).ok();
             }
         });
 
@@ -75,14 +102,14 @@ pub fn setup(io: &socketioxide::SocketIo, state: Arc<AppState>) {
                             q.remove(idx);
                             let items = q.items.clone();
                             drop(q);
-                            st.io.emit("syncQueue", &items).ok();
+                            st.io.emit("syncQueue", serde_json::json!({"items": &items})).ok();
                         }
                     }
                     "clearQueue" => {
                         let mut q = st.video_queue.write().await;
                         q.clear();
                         drop(q);
-                        st.io.emit("syncQueue", &Vec::<()>::new()).ok();
+                        st.io.emit("syncQueue", serde_json::json!({"items": []})).ok();
                     }
                     _ => {}
                 }

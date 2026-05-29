@@ -375,9 +375,10 @@
 
     <!-- ══ MEDIA WIDGET ═══════════════════════════════════════════════
          Posicionado encima del chat, a la derecha.
-         Se muestra solo cuando hay algo en la cola.
+         visibility:hidden en vez de display:none para que el iframe
+         siga emitiendo audio aunque el widget no sea visible.
     ════════════════════════════════════════════════════════════════ -->
-    <div id="media-widget" class="px-border" style="opacity:0;transform:scale(0.9);display:none;">
+    <div id="media-widget" class="px-border" style="opacity:0;transform:scale(0.9);visibility:hidden;">
         <div id="video-container">
             <div id="youtube-player"></div>
             <video id="direct-video" autoplay></video>
@@ -444,15 +445,24 @@
     let loadingTimeout;
     let ytMsgHandler   = null;
 
-    socket.on("syncQueue", (queue) => {
-        localQueue = queue;
+    socket.on("syncQueue", (data) => {
+        // El servidor envía {items: [...]} para evitar el desempaquetado
+        // de Socket.IO que convierte Vec<T> en múltiples argumentos
+        localQueue = data?.items || [];
         updateBadge();
-        if (!isPlaying && localQueue.length > 0) playHead();
         if (localQueue.length === 0) {
-            isPlaying = false;
+            isPlaying   = false;
+            isAdvancing = false;
             hideWidget();
             youtubePlayerDiv.innerHTML = "";
             if (directVideo) { directVideo.pause(); directVideo.src = ""; }
+        } else if (!isPlaying) {
+            playHead();
+        } else if (youtubePlayerDiv.children.length === 0 &&
+                   !(directVideo.src && !directVideo.paused)) {
+            // isPlaying=true pero nada reproduciéndose realmente → recuperar
+            isPlaying = false;
+            playHead();
         }
     });
 
@@ -461,21 +471,29 @@
     socket.on("toggleVideo", (data) => {
         isVideoVisible = data.showVideo;
         if (!isVideoVisible) {
-            mediaWidget.style.display = "none";
-        } else if (isPlaying) {
-            mediaWidget.style.display = "block";
-            requestAnimationFrame(() => { mediaWidget.style.opacity = "1"; mediaWidget.style.transform = "scale(1)"; });
+            // Ocultamos visualmente pero mantenemos el iframe vivo para el audio
+            mediaWidget.style.visibility = "hidden";
+            mediaWidget.style.opacity    = "0";
+        } else {
+            mediaWidget.style.visibility = "visible";
+            requestAnimationFrame(() => {
+                mediaWidget.style.opacity    = "1";
+                mediaWidget.style.transform  = "scale(1)";
+            });
         }
     });
 
     function playHead() {
         if (isPlaying || localQueue.length === 0) return;
         const next = localQueue[0];
+        if (!next.videoId && !next.url) {
+            socket.emit("advanceQueue", { videoId: null, url: null });
+            return;
+        }
         isPlaying = true;
         showWidget(next);
         if (next.videoId) playYouTube(next.videoId);
-        else if (next.url) playDirect(next.url);
-        else finishCurrent();
+        else              playDirect(next.url);
     }
 
     let isAdvancing = false;
@@ -486,7 +504,8 @@
         clearTimeout(loadingTimeout);
         if (ytMsgHandler) { window.removeEventListener("message", ytMsgHandler); ytMsgHandler = null; }
         isPlaying = false;
-        socket.emit("advanceQueue");
+        const item = localQueue[0];
+        socket.emit("advanceQueue", { videoId: item?.videoId ?? null, url: item?.url ?? null });
     }
 
     function playYouTube(videoId) {
@@ -497,25 +516,41 @@
         const iframe = document.createElement("iframe");
         iframe.style.cssText = "width:100%;height:100%;border:none;display:block;";
         iframe.allow = "autoplay; encrypted-media";
+        // mute=1 garantiza autoplay en OBS CEF; se desmutea vía postMessage cuando el player esté listo
         iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}` +
-            `?autoplay=1&controls=0&rel=0&modestbranding=1&enablejsapi=1` +
-            `&origin=${encodeURIComponent(location.origin)}`;
+            `?autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&enablejsapi=1` +
+            `&origin=${location.origin}`;
         youtubePlayerDiv.appendChild(iframe);
 
-        // Detectar fin y errores via postMessage
+        let unmuted = false;
+        const doUnmute = () => {
+            if (unmuted) return;
+            unmuted = true;
+            try {
+                iframe.contentWindow.postMessage(JSON.stringify({event:"command",func:"unMute",   args:""}),   "*");
+                iframe.contentWindow.postMessage(JSON.stringify({event:"command",func:"setVolume",args:[100]}),"*");
+                iframe.contentWindow.postMessage(JSON.stringify({event:"command",func:"playVideo",args:""}),   "*");
+            } catch {}
+        };
+
+        // Fallback: desmutear cuando el iframe termine de cargar
+        iframe.addEventListener("load", () => setTimeout(doUnmute, 500));
+
+        // Detectar eventos del player YouTube vía postMessage
         if (ytMsgHandler) window.removeEventListener("message", ytMsgHandler);
         ytMsgHandler = (e) => {
             if (!String(e.origin).includes("youtube")) return;
             try {
                 const d = JSON.parse(e.data);
-                if (d.event === "onStateChange" && d.info === 0) finishCurrent(); // ended
+                if (d.event === "onReady") doUnmute();                         // player listo → desmutear
+                if (d.event === "onStateChange" && d.info === 0) finishCurrent(); // video terminó
                 if (d.event === "onError") finishCurrent();
             } catch {}
         };
         window.addEventListener("message", ytMsgHandler);
 
         clearTimeout(loadingTimeout);
-        loadingTimeout = setTimeout(finishCurrent, 3600000); // 1h max
+        loadingTimeout = setTimeout(finishCurrent, 600000); // 10min máximo
     }
 
     function playDirect(url) {
@@ -534,16 +569,18 @@
             videoTitleEl.classList.add("scrolling");
             videoTitleEl.innerHTML = `<div class="title-inner marquee">${t} &nbsp;&nbsp;◆&nbsp;&nbsp; ${t} &nbsp;&nbsp;◆&nbsp;&nbsp;</div>`;
         }
-        if (videoRequesterEl) videoRequesterEl.innerText = data.user  || "Anónimo";
+        if (videoRequesterEl) videoRequesterEl.innerText = data.user || "Anónimo";
         if (isVideoVisible) {
-            mediaWidget.style.display = "block";
+            mediaWidget.style.visibility = "visible";
             requestAnimationFrame(() => { mediaWidget.style.opacity = "1"; mediaWidget.style.transform = "scale(1)"; });
         }
     }
 
     function hideWidget() {
         mediaWidget.style.opacity = "0"; mediaWidget.style.transform = "scale(0.9)";
-        setTimeout(() => { if (localQueue.length === 0) mediaWidget.style.display = "none"; }, 500);
+        // Usar visibility:hidden en vez de display:none para que el iframe
+        // siga procesando audio en OBS cuando !voff está activo
+        setTimeout(() => { if (localQueue.length === 0) mediaWidget.style.visibility = "hidden"; }, 500);
     }
 
     function updateBadge() {
@@ -639,7 +676,18 @@
         if (audioContext.state === "suspended") audioContext.resume();
         const ttsAudio = new Audio("data:audio/mp3;base64," + data.audioBase64);
         ttsAudio.volume = VOL_TTS;
-        ttsAudio.play();
+        ttsAudio.play().catch(() => {
+            // Si autoplay está bloqueado, intentar con Web Audio API como fallback
+            fetch("data:audio/mp3;base64," + data.audioBase64)
+                .then(r => r.arrayBuffer())
+                .then(buf => audioContext.decodeAudioData(buf))
+                .then(decoded => {
+                    const src = audioContext.createBufferSource();
+                    src.buffer = decoded;
+                    src.connect(audioContext.destination);
+                    src.start(0);
+                }).catch(() => {});
+        });
     });
     </script>
 </body>
