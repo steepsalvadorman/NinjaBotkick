@@ -1,6 +1,6 @@
 # DaiBot — Bot de Stream para Kick.com
 
-Bot de streaming para el canal **SeniorDai** en Kick.com. Maneja el chat, reproduce videos de YouTube pedidos por el chat, hace text-to-speech y muestra un overlay animado en OBS.
+Bot de streaming para el canal **SeniorDai** en Kick.com. Maneja el chat, reproduce videos de YouTube pedidos por el chat, hace text-to-speech, gestiona sorteos y muestra un overlay animado en OBS.
 
 ---
 
@@ -8,25 +8,25 @@ Bot de streaming para el canal **SeniorDai** en Kick.com. Maneja el chat, reprod
 
 | Función | Descripción |
 |---|---|
-| 💬 Chat en vivo | Lee el chat de Kick y lo muestra en el overlay de OBS |
-| 🎬 Cola de videos | El chat puede pedir videos de YouTube con `!play` |
-| 🔊 Text-to-Speech | El chat puede hacer hablar al bot con `!s` |
-| 📺 Overlay OBS | Pantalla animada estilo pixel art con stats, chat y reproductor |
-| 👥 Meta de seguidores | Barra de progreso de seguidores en tiempo real |
-| 💻 Stats del sistema | CPU, RAM y temperatura de Lima en el overlay |
+| 💬 Chat en vivo | Lee el chat de Kick y responde a comandos |
+| 🎬 Cola de videos | El chat pide videos de YouTube con `!play` |
+| 🔊 Text-to-Speech | El chat hace hablar al bot con `!s` y otras voces |
+| 🎮 Entretenimiento | Dados, 8-ball y sorteos con `!dado`, `!8ball`, `!sorteo` |
+| 📢 Respuestas automáticas | Discord, PC, horario, seguidores, uptime… |
+| 🛡️ Anti-spam | Cooldowns por usuario y globales en todos los comandos |
+| 📺 Overlay OBS | Pantalla animada estilo pixel art con stats y reproductor |
+| 👥 Meta de seguidores | Barra de progreso en tiempo real vía Pusher |
+| 💻 Stats del sistema | CPU, RAM y temperatura en el overlay |
 
 ---
 
 ## Requisitos
-
-Antes de correr el bot necesitas tener instalado:
 
 - **Rust** — [rustup.rs](https://rustup.rs) (el script lo instala solo si falta)
 - **Node.js** — para el login OAuth de Kick
 - **Python edge-tts** — para el text-to-speech
 
 ```bash
-# Instalar edge-tts (solo una vez)
 pip install edge-tts
 ```
 
@@ -40,22 +40,26 @@ git clone https://github.com/steepsalvadorman/DaiBotkick.git
 cd DaiBotkick
 ```
 
-**2. Crear tu archivo `.env`**
+**2. Crear tu `.env`**
 ```bash
 cp .env.example .env
 ```
 
-**3. Editar `.env` con tus datos**
-
-Lo mínimo que necesitas:
+**3. Editar `.env` con tus datos** — lo mínimo:
 ```env
 CHANNEL_NAME=tu_canal_de_kick
 
-KICK_CLIENT_ID=     # de kick.com/settings/developer
-KICK_CLIENT_SECRET= # de kick.com/settings/developer
+KICK_CLIENT_ID=      # kick.com/settings/developer
+KICK_CLIENT_SECRET=  # kick.com/settings/developer
+
+# Respuestas automáticas del chat
+CMD_DISCORD=https://discord.gg/tu-link
+CMD_REDES=Tus redes sociales aquí
+CMD_PC=CPU: ... | GPU: ... | RAM: ...
+CMD_HORARIO=Lunes a viernes de 18:00 a 22:00
 ```
 
-El resto de campos (tokens OAuth) se llenan automáticamente al hacer login.
+Los tokens OAuth se llenan automáticamente al hacer login.
 
 ---
 
@@ -66,10 +70,10 @@ El resto de campos (tokens OAuth) se llenan automáticamente al hacer login.
 ```
 
 El script hace todo solo:
-1. Verifica que Rust y Node.js estén instalados
-2. Abre el navegador para que autorices el bot en Kick (primera vez)
+1. Verifica Rust y Node.js
+2. Abre el navegador para autorizar el bot en Kick (primera vez)
 3. Compila el backend en Rust
-4. Arranca el bot (y lo reinicia solo si se cae)
+4. Arranca el bot y lo reinicia si se cae
 
 ---
 
@@ -85,36 +89,58 @@ Agrega una **Browser Source** con estos ajustes:
 | Controlar audio vía OBS | ✅ Marcado |
 | CSS personalizado | `body { background-color: rgba(0,0,0,0); margin: 0; overflow: hidden; }` |
 
-> ⚠️ Usa **una sola** browser source. Cada vez que refresca se crea una nueva conexión.
+> ⚠️ Usa **una sola** browser source. Refrescar crea una segunda conexión.
 
 ---
 
 ## Comandos del chat
 
-Estos los puede usar **cualquier persona** en el chat:
+![Comandos](comandos.png)
 
-| Comando | Qué hace |
+### Cualquiera del chat
+
+| Comando | Descripción | Cooldown |
+|---|---|---|
+| `!play [url]` | Agrega un video de YouTube a la cola | 30s por usuario |
+| `!cola` | Muestra los próximos videos en cola | 30s global |
+| `!quitarme` | Elimina tu primer video de la cola | — |
+| `!misongs` | Ve tus videos con su posición en cola | 15s por usuario |
+| `!s [texto]` | TTS voz Camila (acento peruano) | 15s por usuario |
+| `!dalia [texto]` | TTS voz Dalia (mexicano) | 15s por usuario |
+| `!jorge [texto]` | TTS voz Jorge (mexicano) | 15s por usuario |
+| `!alex [texto]` | TTS voz Alex (peruano) | 15s por usuario |
+| `!dado` | Número aleatorio del 1 al 100 | 15s por usuario |
+| `!8ball [pregunta]` | El oráculo responde | 10s por usuario |
+| `!sorteo` / `!participar` | Entrar al sorteo cuando esté abierto | — |
+| `!uptime` | Tiempo que llevamos en vivo | 30s global |
+| `!seguidores` | Seguidores actuales vs meta | 60s global |
+| `!discord` | Link al servidor de Discord | 20s global |
+| `!redes` | Redes sociales | 20s global |
+| `!pc` / `!setup` | Especificaciones del equipo | 20s global |
+| `!horario` | Horario de streams | 20s global |
+| `!comandos` / `!help` | Lista rápida de comandos | 20s global |
+
+### Solo el streamer
+
+| Comando | Descripción |
 |---|---|
-| `!play [url]` | Agrega un video de YouTube a la cola |
-| `!s [texto]` | El bot habla con voz peruana (Camila) |
-| `!camila [texto]` | Voz peruana femenina |
-| `!dalia [texto]` | Voz mexicana femenina |
-| `!jorge [texto]` | Voz mexicana masculina |
-| `!alex [texto]` | Voz peruana masculina |
-| `!jacinta [texto]` | Voz peruana femenina (alias de Camila) |
+| `!von` | Muestra el widget de video en el overlay |
+| `!voff` | Oculta el video (el audio continúa) |
+| `!vstop` | Para el video y vacía la cola |
+| `!next` / `!skip` | Salta al siguiente video |
+| `!sorteo abrir` | Abre el sorteo para participantes |
+| `!sorteo cerrar` | Cierra el sorteo |
+| `!sorteo ganador` | Elige y anuncia al ganador al azar |
 
 ---
 
-## Comandos del streamer
+## Imagen de comandos
 
-Solo funcionan si los escribe el dueño del canal:
+El archivo `comandos.png` (4K, 3840×2160) es una imagen lista para subir a la información del stream. Para regenerarla:
 
-| Comando | Qué hace |
-|---|---|
-| `!von` | Muestra el reproductor de video en el overlay |
-| `!voff` | Oculta el video pero el audio sigue sonando |
-| `!vstop` | Para todo: limpia la cola y oculta el reproductor |
-| `!next` / `!skip` | Salta al siguiente video de la cola |
+```bash
+./make-comandos.sh
+```
 
 ---
 
@@ -122,43 +148,57 @@ Solo funcionan si los escribe el dueño del canal:
 
 ```
 DaiBotkick/
-├── autorun.sh          ← Script para iniciar todo
-├── .env                ← Tus credenciales (NO se sube a git)
+├── autorun.sh          ← Inicia el bot (instala deps, autentica, compila)
+├── make-comandos.sh    ← Genera comandos.png en alta resolución
+├── comandos.html       ← Fuente del diseño de la imagen de comandos
+├── comandos.png        ← Imagen de comandos lista para el stream (4K)
+├── .env                ← Credenciales (NO se sube a git)
 ├── .env.example        ← Plantilla de configuración
 │
-├── backend/            ← Servidor en Rust
+├── backend/            ← Servidor en Rust (axum + socketioxide)
 │   └── src/
-│       ├── main.rs         Punto de entrada
-│       ├── commands/       Lógica de comandos del chat
-│       ├── kick/           Conexión al chat de Kick.com
-│       ├── tts/            Text-to-speech (edge-tts)
-│       ├── queue/          Cola de videos
-│       ├── server/         WebSocket con el overlay
+│       ├── main.rs         Punto de entrada y AppState
+│       ├── commands/       Lógica de todos los comandos del chat
+│       ├── cooldown.rs     Anti-spam: cooldowns por usuario y globales
+│       ├── kick/           Conexión al chat de Kick.com (Pusher WebSocket)
+│       ├── tts/            Text-to-speech vía edge-tts (Python CLI)
+│       ├── queue/          Cola de videos con persistencia en disco
+│       ├── server/         WebSocket con el overlay (Socket.IO)
 │       └── stats/          CPU/RAM en tiempo real
 │
-├── overlay/            ← Archivos que ve OBS
-│   └── pixel.html          El overlay principal (estilo pixel art)
+├── overlay/            ← Archivos servidos al OBS
+│   └── pixel.html          Overlay principal (pixel art, chat, reproductor)
 │
 ├── login/              ← Login OAuth de Kick
 │   └── login.js
 │
 └── data/               ← Datos en tiempo real (no en git)
-    └── tts_cache/          Cache de audios generados
+    └── tts_cache/          Cache de audios MP3 generados
 ```
 
 ---
 
-## Tecnologías usadas
+## Tecnologías
 
-- **Backend:** Rust con [Axum](https://github.com/tokio-rs/axum) + [socketioxide](https://github.com/Totodore/socketioxide)
+- **Backend:** Rust — [Axum](https://github.com/tokio-rs/axum), [socketioxide](https://github.com/Totodore/socketioxide), tokio, reqwest
 - **Overlay:** HTML + CSS + JavaScript vanilla
-- **Chat:** API de Kick.com vía Pusher WebSocket
-- **TTS:** [edge-tts](https://github.com/rany2/edge-tts) (voces de Microsoft Edge, gratis)
-- **Videos:** YouTube IFrame embed con autoplay + Web Audio API
+- **Chat:** Kick.com API v1 (OAuth 2.0) + Pusher WebSocket
+- **TTS:** [edge-tts](https://github.com/rany2/edge-tts) — voces de Microsoft Edge, gratis
+- **Videos:** YouTube IFrame con autoplay y unmute vía postMessage
 
 ---
 
-## Solución de problemas comunes
+## Tests
+
+```bash
+cd backend && cargo test
+```
+
+43 tests unitarios cubriendo: cooldowns, cola de videos, voces TTS, parsing de URLs de YouTube y helpers de configuración.
+
+---
+
+## Solución de problemas
 
 **El bot no se conecta al chat**
 → Corre `./autorun.sh` de nuevo para renovar el token OAuth
@@ -168,8 +208,11 @@ DaiBotkick/
 → Verifica que "Controlar audio vía OBS" esté marcado en la browser source
 
 **El video no reproduce**
-→ Asegúrate de tener una sola browser source en OBS (no refrescar)
+→ Asegúrate de tener una sola browser source en OBS
 → El video aparece automáticamente cuando alguien usa `!play`
+
+**El bot arranca pero no responde en el chat**
+→ Verifica que el token OAuth sea válido: comprueba los logs de `autorun.sh`
 
 **El overlay se ve cortado**
 → El overlay está diseñado para 1920×1080. Verifica las dimensiones en OBS

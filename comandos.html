@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>DaiBot — Comandos</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0e0e10;
+    color: #efeff1;
+    width: 1920px;
+    min-height: 1080px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 60px;
+  }
+
+  .card {
+    background: #18181b;
+    border: 1px solid #2a2a2e;
+    border-radius: 20px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 0 80px rgba(83, 252, 24, 0.07);
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #1c1c20 0%, #111113 100%);
+    border-bottom: 3px solid #53fc18;
+    padding: 36px 52px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .header-icon {
+    width: 64px;
+    height: 64px;
+    background: #53fc18;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    flex-shrink: 0;
+  }
+
+  .header-text h1 {
+    font-size: 30px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+
+  .header-text p {
+    font-size: 16px;
+    color: #adadb8;
+    margin-top: 4px;
+  }
+
+  .header-badge {
+    margin-left: auto;
+    background: rgba(83, 252, 24, 0.12);
+    border: 1px solid rgba(83, 252, 24, 0.3);
+    color: #53fc18;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 18px;
+    border-radius: 24px;
+    letter-spacing: 1px;
+  }
+
+  /* ── Body ── */
+  .body {
+    padding: 36px 52px 44px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 36px;
+  }
+
+  /* ── Section ── */
+  .section { display: flex; flex-direction: column; gap: 4px; }
+
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: #53fc18;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #2a2a2e;
+    margin-bottom: 4px;
+  }
+
+  /* ── Command row ── */
+  .cmd {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .cmd-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #53fc18;
+    white-space: nowrap;
+    min-width: 160px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .cmd-name.owner { color: #ff8c00; }
+
+  .cmd-desc {
+    font-size: 14px;
+    color: #c0bfc4;
+    line-height: 1.45;
+    padding-top: 1px;
+    flex: 1;
+  }
+
+  .cmd-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .tag-cd  { background: rgba(173,173,184,0.13); color: #adadb8; }
+  .tag-gcd { background: rgba(120,120,255,0.15); color: #a8a8ff; }
+
+  .spacer { height: 20px; }
+
+  /* ── Leyenda ── */
+  .legend {
+    padding: 14px 16px;
+    background: #111113;
+    border-radius: 10px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .legend span { font-size: 13px; color: #6b6b76; display: flex; align-items: center; gap: 6px; }
+
+  /* ── Footer ── */
+  .footer {
+    border-top: 1px solid #2a2a2e;
+    padding: 18px 52px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #111113;
+  }
+  .dot {
+    width: 9px; height: 9px;
+    background: #53fc18;
+    border-radius: 50%;
+  }
+  .footer p { font-size: 14px; color: #6b6b76; }
+  .footer p span { color: #adadb8; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">🤖</div>
+    <div class="header-text">
+      <h1>DaiBot — Comandos del Chat</h1>
+      <p>Todos los comandos disponibles durante el stream en vivo</p>
+    </div>
+    <div class="header-badge">KICK.COM / SENIORDAI</div>
+  </div>
+
+  <!-- Body 3 columnas -->
+  <div class="body">
+
+    <!-- Columna 1: Videos + TTS -->
+    <div>
+      <div class="section">
+        <div class="section-title">🎬 Videos &amp; Cola</div>
+        <div class="cmd">
+          <span class="cmd-name">!play [url]</span>
+          <span class="cmd-desc">Agrega un video de YouTube a la cola</span>
+          <span class="cmd-tag tag-cd">30s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!cola</span>
+          <span class="cmd-desc">Muestra los próximos videos en cola</span>
+          <span class="cmd-tag tag-gcd">30s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!quitarme</span>
+          <span class="cmd-desc">Elimina tu primer video de la cola</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!misongs</span>
+          <span class="cmd-desc">Ve tus videos con su posición en cola</span>
+          <span class="cmd-tag tag-cd">15s</span>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="section">
+        <div class="section-title">🎤 Texto a Voz</div>
+        <div class="cmd">
+          <span class="cmd-name">!s [texto]</span>
+          <span class="cmd-desc">Voz Camila — acento peruano</span>
+          <span class="cmd-tag tag-cd">15s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!dalia [texto]</span>
+          <span class="cmd-desc">Voz Dalia — acento mexicano</span>
+          <span class="cmd-tag tag-cd">15s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!jorge [texto]</span>
+          <span class="cmd-desc">Voz Jorge — acento mexicano</span>
+          <span class="cmd-tag tag-cd">15s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!alex [texto]</span>
+          <span class="cmd-desc">Voz Alex — acento peruano</span>
+          <span class="cmd-tag tag-cd">15s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna 2: Entretenimiento + Info -->
+    <div>
+      <div class="section">
+        <div class="section-title">🎮 Entretenimiento</div>
+        <div class="cmd">
+          <span class="cmd-name">!dado</span>
+          <span class="cmd-desc">Tira un número aleatorio del 1 al 100</span>
+          <span class="cmd-tag tag-cd">15s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!8ball [pregunta]</span>
+          <span class="cmd-desc">El oráculo responde tu pregunta</span>
+          <span class="cmd-tag tag-cd">10s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!sorteo</span>
+          <span class="cmd-desc">Participar cuando el sorteo esté abierto</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!participar</span>
+          <span class="cmd-desc">Alias de !sorteo para unirte</span>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="section">
+        <div class="section-title">ℹ️ Información</div>
+        <div class="cmd">
+          <span class="cmd-name">!uptime</span>
+          <span class="cmd-desc">Tiempo que llevamos en vivo</span>
+          <span class="cmd-tag tag-gcd">30s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!seguidores</span>
+          <span class="cmd-desc">Seguidores actuales vs meta del canal</span>
+          <span class="cmd-tag tag-gcd">60s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!discord</span>
+          <span class="cmd-desc">Link al servidor de Discord</span>
+          <span class="cmd-tag tag-gcd">20s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!pc  /  !setup</span>
+          <span class="cmd-desc">Especificaciones del equipo</span>
+          <span class="cmd-tag tag-gcd">20s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!horario</span>
+          <span class="cmd-desc">Horario habitual de streams</span>
+          <span class="cmd-tag tag-gcd">20s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!redes</span>
+          <span class="cmd-desc">Redes sociales del streamer</span>
+          <span class="cmd-tag tag-gcd">20s</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name">!comandos</span>
+          <span class="cmd-desc">Lista rápida de comandos en el chat</span>
+          <span class="cmd-tag tag-gcd">20s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna 3: Solo Streamer + Leyenda -->
+    <div>
+      <div class="section">
+        <div class="section-title">🔒 Solo Streamer</div>
+        <div class="cmd">
+          <span class="cmd-name owner">!von</span>
+          <span class="cmd-desc">Muestra el widget de video en el overlay</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name owner">!voff</span>
+          <span class="cmd-desc">Oculta el video (el audio continúa)</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name owner">!vstop</span>
+          <span class="cmd-desc">Para el video y vacía la cola completa</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name owner">!next  /  !skip</span>
+          <span class="cmd-desc">Salta al siguiente video de la cola</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name owner">!sorteo abrir</span>
+          <span class="cmd-desc">Abre el sorteo para participantes</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name owner">!sorteo cerrar</span>
+          <span class="cmd-desc">Cierra el sorteo (no más entradas)</span>
+        </div>
+        <div class="cmd">
+          <span class="cmd-name owner">!sorteo ganador</span>
+          <span class="cmd-desc">Elige y anuncia al ganador al azar</span>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="legend">
+        <span>
+          <span class="cmd-tag tag-cd" style="font-size:12px;">Ns</span>
+          Cooldown por usuario
+        </span>
+        <span>
+          <span class="cmd-tag tag-gcd" style="font-size:12px;">Ns</span>
+          Cooldown global del chat
+        </span>
+        <span>
+          <span style="color:#ff8c00; font-weight:700; font-family:monospace; font-size:14px;">naranja</span>
+          Solo el streamer
+        </span>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="dot"></div>
+    <p>DaiBot activo · Canal <span>seniordai</span> · kick.com/seniordai</p>
+  </div>
+
+</div>
+</body>
+</html>
